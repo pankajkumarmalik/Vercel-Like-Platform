@@ -1,6 +1,18 @@
 import { exec } from "child_process";
 import path, { join } from "path";
-const fs = require("fs");
+import fs from "fs";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import mime from "mime-types";
+
+const s3Client = new S3Client({
+  region: "",
+  credentials: {
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+  },
+});
+
+const PROJECT_ID = process.env.PROJECT_ID;
 
 async function init() {
   console.log("Executing script.js");
@@ -24,6 +36,22 @@ async function init() {
     });
     for (const filePath of distFolderContents) {
       if (fs.lstatSync(filePath).isDirectory()) continue;
+
+      console.log("uploading..", filePath);
+
+      const commmand = new PutObjectCommand({
+        Bucket: "vercel-clone-project-outputs",
+        Key: `__outputs/${PROJECT_ID}/${filePath}`,
+        Body: fs.createReadStream(filePath),
+        ContentType: mime.lookup(filePath),
+      });
+
+      await s3Client.send(commmand);
+      console.log("uploaded", filePath);
     }
+
+    console.log("Done...");
   });
 }
+
+init();
