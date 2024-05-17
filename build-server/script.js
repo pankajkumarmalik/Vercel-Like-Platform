@@ -1,14 +1,19 @@
-import { exec } from "child_process";
-import path, { join } from "path";
-import fs from "fs";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import mime from "mime-types";
+// import { exec } from "child_process";
+// import path, { join } from "path";
+// import fs from "fs";
+// import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+// import mime from "mime-types";
+const { exec } = require("child_process");
+const path = require("path");
+const fs = require("fs");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const mime = require("mime-types");
 
 const s3Client = new S3Client({
   region: "",
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+    accessKeyId: "",
+    secretAccessKey: "",
   },
 });
 
@@ -16,7 +21,7 @@ const PROJECT_ID = process.env.PROJECT_ID;
 
 async function init() {
   console.log("Executing script.js");
-  const outDirPath = join(__dirname, "output");
+  const outDirPath = path.join(__dirname, "output");
 
   const p = exec(`cd ${outDirPath} && npm install && npm run build`);
 
@@ -34,14 +39,15 @@ async function init() {
     const distFolderContents = fs.readdirSync(distFolderPath, {
       recursive: true,
     });
-    for (const filePath of distFolderContents) {
+    for (const file of distFolderContents) {
+      const filePath = path.join(distFolderPath, file);
       if (fs.lstatSync(filePath).isDirectory()) continue;
 
       console.log("uploading..", filePath);
 
       const commmand = new PutObjectCommand({
         Bucket: "vercel-clone-project-outputs",
-        Key: `__outputs/${PROJECT_ID}/${filePath}`,
+        Key: `__outputs/${PROJECT_ID}/${file}`,
         Body: fs.createReadStream(filePath),
         ContentType: mime.lookup(filePath),
       });
